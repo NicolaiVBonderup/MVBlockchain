@@ -2,10 +2,12 @@
 from hashlib import sha256
 import time
 import transaction as ts
+import uuid
 
 class Transaction:
 
-    def __init__(self, sender, receiver, data):
+    def __init__(self, uid, sender, receiver, data):
+        self.uid = uid
         self.hash = None
         self.prev_hash = None
         self.timestamp = time.time()

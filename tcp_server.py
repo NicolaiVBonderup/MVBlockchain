@@ -6,6 +6,7 @@ import transaction as ts
 import block
 import blockchain
 import pickle
+import miner
 
 class Server:
 
@@ -69,7 +70,8 @@ class Server:
         return h
 
     def _wait_for_connections(self):
-     
+        # Temp for testing
+        b1 = block.Block()
         while True:
             print ("Awaiting New connection")
             self.socket.listen(3)
@@ -87,15 +89,13 @@ class Server:
             print (type)
             
             if type is 't':
-                type, sender, receiver, message = split_message
+                type, uid, sender, receiver, message = split_message
                 print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
-                transaction = ts.Transaction(sender,receiver,message)
-                b1 = block.Block()
+                transaction = ts.Transaction(uid,sender,receiver,message)
                 b1.add_transaction(transaction)
-                serial = pickle.dumps(b1)
-                print (serial)
-                deserial = pickle.loads(serial)
-                print (deserial)
+                if b1.has_enough_transactions():
+                    print ("Mining started.")
+                    b1.mine()
             if type is 'b':
                 type, message = split_message
                 self.blockchain.add_block_to_ledger()
