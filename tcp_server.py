@@ -13,7 +13,7 @@ class Server:
 
     def __init__(self, port = 80):
      
-        self.host = ''   # <-- works on all avaivable network interfaces
+        self.host = ''   # <-- works on all available network interfaces
         self.port = port
         self.chain = blockchain.Blockchain()
 
@@ -24,7 +24,7 @@ class Server:
         s = Server(80)  # Constructs server object
      
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try: # user provided in the __init__() port may be unavaivable
+        try: # user provided in the __init__() port may be unavailable
             print("Launching HTTP server on ", self.host, ":",self.port)
             self.socket.bind((self.host, self.port))
 
