@@ -5,10 +5,27 @@ class Phonebook:
         self.clients = {}
 
     def add_peer_to_phonebook(self, UID, peer):
-        # UID, port, pubkey
+        # UID, port, pubkey_e, pubkey_n
         self.nodes.update({UID: peer})
         
+    def update_phonebook(self, client_dict, node_dict):
+        
+        for idx, key in enumerate(client_dict):
+            if key not in self.clients:
+                val = client_dict.get(key)
+                self.clients.update({key:val})
+                
+        for idx, key in enumerate(node_dict):
+            if key not in self.nodes:
+                val = node_dict.get(key)
+                self.nodes.update({key:val})
+                
+        print (self.clients)
+        print (self.nodes)
+        
+        
     def add_client_to_phonebook(self, name, key):
+        # uid, pubkey_e, pubkey_n
         self.clients.update({name : key})
 
     def get_peer_by_UID(self, name):
@@ -24,10 +41,4 @@ class Phonebook:
         return peer_list
         
     def get_all_peers(self):
-        peer_list = []
-        
-        
-        for uid, dict in enumerate(self.nodes):
-            peer_list.append((dict.get('port'), dict.get('pubkey')))
-    
-        return peer_list
+        return (self.nodes, self.clients)

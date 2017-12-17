@@ -8,17 +8,22 @@ import blockchain
 import pickle
 import rsa
 from phonebook import Phonebook
+import sys
+import json
 
 class Server:
-
+    
+    
 
     def __init__(self, port = 8080):
     
+        self.testargs = " ".join(sys.argv[1:])
         self.publickey, self.privatekey = rsa.newkeys(512)
         self.host = ''   # <-- works on all available network interfaces
         self.port = port
         self.chain = blockchain.Blockchain()
         self.phonebook = Phonebook()
+        self.uid = 'test1'
 
     def activate_server(self):
         signal.signal(signal.SIGINT, graceful_shutdown)
@@ -51,6 +56,7 @@ class Server:
 
         print ("Server successfully acquired the socket with port: ", self.port)
         print ("Press Ctrl+C to shut down the server and exit.")
+        self.request_phonebook_from_peers()
         self._wait_for_connections()
 
     def shutdown(self):
@@ -62,15 +68,37 @@ class Server:
         except Exception as e:
             print("Warning: could not shut down the socket. Maybe it was already closed?",e)
 
-    def _gen_headers(self,  code):
-     
-        h = ''
-        if (code == 200):
-           h = 'HTTP/1.1 200 OK\n'
-        elif(code == 404):
-           h = 'HTTP/1.1 404 Not Found\n'
+    def request_phonebook_from_peers(self):
+    
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   
+        # Can add system arguments to the method call if we wanna call just specific ports
+        # Mostly used for testing
+        if self.testargs != "":
+            ports = [int(x) for x in self.testargs.split(" ")]
+        else: 
+            ports = range(8000,9000)
+        
+        for port_in_range in ports:
+            try:
+                sock.connect(('localhost', port_in_range))
+                sock.sendall(bytes("book", 'utf-8'))
+                    
+                received = str(sock.recv(1024), "utf-8")
+                message = received.split('$')
+                    
+                if message[0] == 'bookack':
+                    
+                    peers_response = json.loads(message[1])
+                    clients_response = json.loads(message[2])
+                    self.phonebook.update_phonebook(peers_response, clients_response)
+            
+            except Exception as e:
+                #print (e)
+                sock.close()
+            finally:
+                sock.close()
 
-        return h
 
     def _wait_for_connections(self):
         # Temp for testing
@@ -96,7 +124,7 @@ class Server:
                 if message_type == 'ping':
                 
                     message_type, name, pubkey_n, pubkey_e = split_message
-                    user_pubkey = rsa.PublicKey(int(pubkey_n), int(pubkey_e))
+                    user_pubkey = {'pubkey_n': int(pubkey_n), 'pubkey_e': int(pubkey_e)}
                     self.phonebook.add_client_to_phonebook(name, user_pubkey)
                 
                     ping_response = "ack {0} {1} {2} {3}".format('test',self.port,self.publickey.n,self.publickey.e)
@@ -114,6 +142,13 @@ class Server:
                 elif message_type == 'b':
                     message_type, message = split_message
                     self.blockchain.add_block_to_ledger()
+                elif message_type == 'book':
+                    full_book = self.phonebook.get_all_peers()
+                    peers_serialized = json.dumps(full_book[0])
+                    clients_serialized = json.dumps(full_book[1])
+                    book_response = "bookack$" + peers_serialized + "$" +  clients_serialized
+                    print(book_response)
+                    conn.send(bytes(book_response,'utf-8'))
                     
                 
             finally:
