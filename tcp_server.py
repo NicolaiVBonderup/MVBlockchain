@@ -6,7 +6,6 @@ import transaction as ts
 import block
 import blockchain
 import pickle
-import miner
 
 class Server:
 
