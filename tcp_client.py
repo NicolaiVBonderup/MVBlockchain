@@ -10,6 +10,7 @@ host = "localhost"
 port = 8080
 USER = input("Input username: ")
 testargs = " ".join(sys.argv[1:])
+book = Phonebook()
 
 
 # Create a socket (SOCK_STREAM means a TCP socket)
@@ -22,42 +23,59 @@ publickey, privatekey = rsa.newkeys(512)
 def activate_client():
     
     ping_network_for_peers()
-    _wait_for_connections()
+    #_wait_for_connections()
 
 def ping_network_for_peers():
 
+    # Can add system arguments to the method call if we wanna call just specific ports
+    # Mostly used for testing
     if testargs is not " ":
         ports = [int(x) for x in testargs.split(" ")]
     else: 
         ports = range(8000,9000)
     
-    book = Phonebook()
-    
     for port_in_range in ports:
         
         try:
-            print(port_in_range)
+            announcement = "ping {0} {1} {2}".format(USER,publickey.n,publickey.e)
+            
             sock.connect((host, port_in_range))
-            sock.sendall(bytes('ping', 'utf-8'))
+            sock.sendall(bytes(announcement, 'utf-8'))
             
             received = str(sock.recv(1024), "utf-8")
             message = received.split(' ')
             
-            print (received)
-            
-            if message[0] is 'ack':
-                message_type, peer_UID, peer_port, peer_pubkey = message
-                print ('Peer found at port ',peer_port)
+            if message[0] == 'ack':
+                message_type, peer_UID, peer_port, peer_pubkey_n, peer_pubkey_e = message
+                peer_pubkey = rsa.PublicKey(int(peer_pubkey_n), int(peer_pubkey_e))
+                print ('Peer "{0}" found at port {1}'.format(peer_UID, peer_port))
                 peer_dict = {'UID': peer_UID, 'port': peer_port, 'pubkey': peer_pubkey}
-                book.add_peer_to_phonebook(peer_dict)
+                book.add_peer_to_phonebook(peer_UID,peer_dict)
         
+        except Exception as e:
+            #print (e)
+            sock.close()
+        finally:
+            sock.close()
+            
+def announce_self_to_network():
+    
+    peer_list = book.get_all_peers_for_announcement()
+    
+    for peer_port in peer_list:
+        
+        try:
+            
+            
+            
+            sock.connect((host, int(peer_port)))
+            sock.sendall(bytes(announcement, 'utf-8'))
+            
         except Exception as e:
             print (e)
             sock.close()
         finally:
-            pass
             sock.close()
-            
         
 def _wait_for_connections():
         
@@ -89,6 +107,7 @@ def _wait_for_connections():
 def get_user_input():
     
     try:
+        # Maybe provide a list of known peers?
         receiver = input("Who will you be sending the transaction to?: ")
         # Needs to be encrypted with recipient's public key.
         message = input("Please input a message for the recipient: ")

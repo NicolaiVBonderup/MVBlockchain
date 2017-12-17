@@ -7,6 +7,7 @@ import block
 import blockchain
 import pickle
 import rsa
+from phonebook import Phonebook
 
 class Server:
 
@@ -17,6 +18,7 @@ class Server:
         self.host = ''   # <-- works on all available network interfaces
         self.port = port
         self.chain = blockchain.Blockchain()
+        self.phonebook = Phonebook()
 
     def activate_server(self):
         signal.signal(signal.SIGINT, graceful_shutdown)
@@ -91,12 +93,17 @@ class Server:
                 print (split_message)
                 print (message_type)
                 
-                if message_type is 'ping':
-                    print('shite')
-                    ping_response = "ack {0} {1} {2}".format('test',self.port,self.publickey)
-                    print (ping_response)
-                    conn.send(ping_response)
-                elif message_type is 't':
+                if message_type == 'ping':
+                
+                    message_type, name, pubkey_n, pubkey_e = split_message
+                    user_pubkey = rsa.PublicKey(int(pubkey_n), int(pubkey_e))
+                    self.phonebook.add_client_to_phonebook(name, user_pubkey)
+                
+                    ping_response = "ack {0} {1} {2} {3}".format('test',self.port,self.publickey.n,self.publickey.e)
+                    conn.send(bytes(ping_response,'utf-8'))
+                    
+                    
+                elif message_type == 't':
                     message_type, sender, receiver, message = split_message
                     print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
                     transaction = ts.Transaction(uid,sender,receiver,message)
@@ -104,11 +111,11 @@ class Server:
                     if b1.has_enough_transactions():
                         print ("Mining started.")
                         b1.mine()
-                elif message_type is 'b':
+                elif message_type == 'b':
                     message_type, message = split_message
                     self.blockchain.add_block_to_ledger()
-                elif message_type is 'a':
-                    message_type, name, pubkey, address = split_message
+                    
+                
             finally:
                 conn.close()
             
