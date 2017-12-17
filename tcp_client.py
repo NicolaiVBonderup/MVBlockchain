@@ -4,10 +4,12 @@ import sys
 import rsa
 import time
 import signal
+from phonebook import Phonebook
 
 host = "localhost"
 port = 8080
-USER = ""
+USER = input("Input username: ")
+testargs = " ".join(sys.argv[1:])
 
 
 # Create a socket (SOCK_STREAM means a TCP socket)
@@ -17,40 +19,45 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Using 512 bit encryption because the recommended minimum bit size for SHA256 is 496 bits.
 publickey, privatekey = rsa.newkeys(512)
 
-def activate_server():
+def activate_client():
     
-        signal.signal(signal.SIGINT, graceful_shutdown)
+    ping_network_for_peers()
+    _wait_for_connections()
 
-        print ("Starting web server")
-        USER = input("Input username: ")
-        port = 8080
-     
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try: # user provided in the __init__() port may be unavailable
-            print("Launching HTTP server on ", host, ":",port)
-            client_socket.bind((host, port))
+def ping_network_for_peers():
 
-        except Exception as e:
-            print ("Warning: Could not acquire port:",port,"\n")
-            print ("Attempting to register on higher port.")
+    if testargs is not " ":
+        ports = [int(x) for x in testargs.split(" ")]
+    else: 
+        ports = range(8000,9000)
+    
+    book = Phonebook()
+    
+    for port_in_range in ports:
+        
+        try:
+            print(port_in_range)
+            sock.connect((host, port_in_range))
+            sock.sendall(bytes('ping', 'utf-8'))
             
-            user_port = port
-            port = 80
-
-            try:
-                print("Launching HTTP server on ", host, ":",port)
-                client_socket.bind((host, port))
-
-            except Exception as e:
-                print("ERROR: Failed to acquire sockets for ports ", user_port, " and 8080. ")
-                print("Try running the Server in a privileged user mode.")
-                shutdown()
-                import sys
-                sys.exit(1)
-
-        print ("Client successfully acquired the socket with port: ", port)
-        print ("Press Ctrl+C to shut down the client and exit.")
-        _wait_for_connections()
+            received = str(sock.recv(1024), "utf-8")
+            message = received.split(' ')
+            
+            print (received)
+            
+            if message[0] is 'ack':
+                message_type, peer_UID, peer_port, peer_pubkey = message
+                print ('Peer found at port ',peer_port)
+                peer_dict = {'UID': peer_UID, 'port': peer_port, 'pubkey': peer_pubkey}
+                book.add_peer_to_phonebook(peer_dict)
+        
+        except Exception as e:
+            print (e)
+            sock.close()
+        finally:
+            pass
+            sock.close()
+            
         
 def _wait_for_connections():
         
@@ -64,7 +71,7 @@ def _wait_for_connections():
                 message = str(data + "\n").encode('utf-8')
                 # Can only be decrypted with the public key.
                 encrypted_message = rsa.encrypt(message, privatekey)
-                full_message = USER + " " + str(encrypted_message)
+                full_message = "t " + USER + " " + str(encrypted_message)
                 
                 # Temp for testing
                 receiving_port = int(input("Which port to send to?: "))
@@ -103,4 +110,5 @@ def graceful_shutdown(sig, dummy):
     
 
 
-activate_server()
+activate_client()
+#_wait_for_connections()

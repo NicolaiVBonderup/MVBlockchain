@@ -6,12 +6,14 @@ import transaction as ts
 import block
 import blockchain
 import pickle
+import rsa
 
 class Server:
 
 
-    def __init__(self, port = 80):
-     
+    def __init__(self, port = 8080):
+    
+        self.publickey, self.privatekey = rsa.newkeys(512)
         self.host = ''   # <-- works on all available network interfaces
         self.port = port
         self.chain = blockchain.Blockchain()
@@ -20,7 +22,7 @@ class Server:
         signal.signal(signal.SIGINT, graceful_shutdown)
 
         print ("Starting web server")
-        s = Server(80)  # Constructs server object
+        s = Server(8080)  # Constructs server object
      
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try: # user provided in the __init__() port may be unavailable
@@ -32,7 +34,7 @@ class Server:
             print ("Attempting to register on higher port.")
             
             user_port = self.port
-            self.port = 8080
+            self.port = 80
 
             try:
                 print("Launching HTTP server on ", self.host, ":",self.port)
@@ -72,32 +74,43 @@ class Server:
         # Temp for testing
         b1 = block.Block()
         while True:
-            print ("Awaiting New connection")
-            self.socket.listen(3)
+            try:
+                print ("Awaiting New connection")
+                self.socket.listen(3)
 
-            conn, addr = self.socket.accept()
+                conn, addr = self.socket.accept()
 
-            print("Got connection from:", addr)
+                print("Got connection from:", addr)
 
-            data = conn.recv(1024)
-            string = bytes.decode(data)
+                data = conn.recv(1024)
+                string = bytes.decode(data)
 
-            split_message = string.split(' ')
-            
-            type = split_message[0]
-            print (type)
-            
-            if type is 't':
-                type, uid, sender, receiver, message = split_message
-                print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
-                transaction = ts.Transaction(uid,sender,receiver,message)
-                b1.add_transaction(transaction)
-                if b1.has_enough_transactions():
-                    print ("Mining started.")
-                    b1.mine()
-            if type is 'b':
-                type, message = split_message
-                self.blockchain.add_block_to_ledger()
+                split_message = string.split(' ')
+                
+                message_type = split_message[0]
+                print (split_message)
+                print (message_type)
+                
+                if message_type is 'ping':
+                    print('shite')
+                    ping_response = "ack {0} {1} {2}".format('test',self.port,self.publickey)
+                    print (ping_response)
+                    conn.send(ping_response)
+                elif message_type is 't':
+                    message_type, sender, receiver, message = split_message
+                    print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
+                    transaction = ts.Transaction(uid,sender,receiver,message)
+                    b1.add_transaction(transaction)
+                    if b1.has_enough_transactions():
+                        print ("Mining started.")
+                        b1.mine()
+                elif message_type is 'b':
+                    message_type, message = split_message
+                    self.blockchain.add_block_to_ledger()
+                elif message_type is 'a':
+                    message_type, name, pubkey, address = split_message
+            finally:
+                conn.close()
             
             
             

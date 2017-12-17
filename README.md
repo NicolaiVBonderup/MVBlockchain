@@ -5,3 +5,7 @@
 ### Block
 
 `{TYPE} {UID} {MESSAGE}`
+
+### Announcement
+
+`{TYPE} {UID} {PUBLICKEY} {ADDRESS}`

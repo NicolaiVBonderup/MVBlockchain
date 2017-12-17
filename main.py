@@ -19,3 +19,4 @@ server.activate_server()
 # Figure out the specific UID protocol we want to follow.
 # Figure out the transaction fees.
 # Messages need to be encrypted with recipient's public key.
+# Start server and client at the same time from the main file.
