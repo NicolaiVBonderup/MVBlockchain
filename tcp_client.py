@@ -58,24 +58,6 @@ def ping_network_for_peers():
         finally:
             sock.close()
             
-def announce_self_to_network():
-    
-    peer_list = book.get_all_peers_for_announcement()
-    
-    for peer_port in peer_list:
-        
-        try:
-            
-            
-            
-            sock.connect((host, int(peer_port)))
-            sock.sendall(bytes(announcement, 'utf-8'))
-            
-        except Exception as e:
-            print (e)
-            sock.close()
-        finally:
-            sock.close()
         
 def _wait_for_connections():
         
