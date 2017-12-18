@@ -10,6 +10,7 @@ import rsa
 from phonebook import Phonebook
 import sys
 import json
+from ast import literal_eval
 
 class Server:
     
@@ -115,11 +116,12 @@ class Server:
                 data = conn.recv(1024)
                 string = bytes.decode(data)
 
-                split_message = string.split(' ')
+                #split_message = string.split(' ')
+                split_message = string.split('$?$')
                 
                 message_type = split_message[0]
-                print (split_message)
-                print (message_type)
+                #print (split_message)
+                #print (message_type)
                 
                 if message_type == 'ping':
                 
@@ -132,13 +134,22 @@ class Server:
                     
                     
                 elif message_type == 't':
-                    message_type, sender, receiver, message = split_message
-                    print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
-                    transaction = ts.Transaction(uid,sender,receiver,message)
-                    b1.add_transaction(transaction)
-                    if b1.has_enough_transactions():
-                        print ("Mining started.")
-                        b1.mine()
+                    message_type, sender, receiver, message, value, fee, timestamp, verification = split_message
+                    
+                    verification_message = bytes("$?$".join([receiver, message, str(value), fee, str(timestamp)]),'utf-8')
+                    
+                    sender_key = self.phonebook.get_pubkey_from_UID(sender)
+                    if rsa.verify(verification_message, literal_eval(verification), sender_key):
+                        
+                        print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
+                        transaction = ts.Transaction(sender,sender,receiver,message)
+                        print (transaction)
+                        b1.add_transaction(transaction)
+                        if b1.has_enough_transactions():
+                            print ("Mining started.")
+                            b1.mine()
+                    except VerificationError:
+                        print ('Not verified')
                 elif message_type == 'b':
                     message_type, message = split_message
                     self.blockchain.add_block_to_ledger()

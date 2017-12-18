@@ -16,3 +16,4 @@ server.activate_server()
 # Messages need to be encrypted with recipient's public key.
 # Start server and client at the same time from the main file.
 # Refactor the if statements in server to use dictionary mapping
+# Make all delimiters the $ sign instead of spaces.

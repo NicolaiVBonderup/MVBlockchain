@@ -1,3 +1,5 @@
+from rsa import PublicKey
+
 class Phonebook:
     
     def __init__(self):
@@ -30,6 +32,13 @@ class Phonebook:
 
     def get_peer_by_UID(self, name):
         return self.nodes.get(name)
+        
+    def get_pubkey_from_UID(self, name):
+        client_dict = self.clients.get(name)
+        pubkey_e = client_dict.get('pubkey_e')
+        pubkey_n = client_dict.get('pubkey_n')
+        client_pubkey = PublicKey(pubkey_n, pubkey_e)
+        return client_pubkey
         
     def get_all_peers_for_announcement(self):
         peer_list = []
