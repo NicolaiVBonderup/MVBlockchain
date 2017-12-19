@@ -27,7 +27,7 @@ def activate_client():
 
 def ping_network_for_peers():
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
     # Can add system arguments to the method call if we wanna call just specific ports
     # Mostly used for testing
     if testargs != "":
@@ -36,7 +36,7 @@ def ping_network_for_peers():
         ports = range(8000,8100)
     
     for port_in_range in ports:
-        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             announcement = "ping$?${0}$?${1}$?${2}".format(USER,publickey.n,publickey.e)
             
@@ -55,41 +55,44 @@ def ping_network_for_peers():
         
         except Exception as e:
             print (e)
-            #sock.close()
-            pass
+            sock.close()
         finally:
-            #sock.close()
-            pass
+            sock.close()
             
-    sock.close()
+    #sock.close()
             
         
 def _wait_for_connections():
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         while True:
+        
+            # Connect to server and send data
+            data = get_user_input()
             
-            try:
-                # Connect to server and send data
-                data = get_user_input()
-                
-                # RSA and TCP requires bytes and not strings, so encoding it.
-                message = str(data).encode('utf-8')
-                # Can only be decrypted with the public key.
-                #encrypted_message = rsa.encrypt(message, privatekey)
-                
-                verification = rsa.sign(message, privatekey, 'SHA-1')
-                print ("FOR VERIFICATION: ",verification)
-                full_message = "t$?$" + USER + "$?$" + data + '$?$' + str(verification)
-                
-                # Temp for testing
-                receiving_port = int(input("Which port to send to?: "))
-                
-                sock.connect((host, receiving_port))
-                sock.sendall(bytes(full_message, "utf-8"))
+            # RSA and TCP requires bytes and not strings, so encoding it.
+            message = str(data).encode('utf-8')
+            # Can only be decrypted with the public key.
+            #encrypted_message = rsa.encrypt(message, privatekey)
+            
+            verification = rsa.sign(message, privatekey, 'SHA-1')
+            
+            full_message = "t$?$" + USER + "$?$" + data + '$?$' + str(verification)
+            
+            # Temp for testing
+            #receiving_port = int(input("Which port to send to?: "))
+            
+            peers = book.get_all_peers_for_announcement()
+            
+            for port in peers:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                try:
+                    print (port)
+                    sock.connect((host, int(port)))
+                    sock.sendall(bytes(full_message, "utf-8"))
+                finally:
+                    sock.close()
 
-            finally:
-                sock.close()
+            
 
             #print("Sent:     {}".format(full_message))
 
@@ -102,7 +105,7 @@ def get_user_input():
         receiver = input("Who will you be sending the transaction to?: ")
         # Needs to be encrypted with recipient's public key.
         message = input("Please input a message for the recipient: ")
-        value = input("How many fuckcoins do you want to send to {0}?: ".format(receiver))
+        value = input("How many coins do you want to send to {0}?: ".format(receiver))
         transac_fee = str((10 * float(value)) / 100.0)
         timestamp = time.time()
         return "$?$".join([receiver, message, str(value), transac_fee, str(timestamp)])

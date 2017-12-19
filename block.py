@@ -3,6 +3,8 @@ from hashlib import sha256
 import transaction
 import time
 import uuid
+import random
+import json
 
 class Block:
 
@@ -60,17 +62,16 @@ class Block:
         return message.hexdigest()
         
     def has_enough_transactions(self):
-        if len(self.transactions) >= 4:
+        #if len(self.transactions) >= 5:
+        if len(self.transactions) >= random.randint(4,8):
             return True
 
     def validate_hash(self, attempted_hash):
-        return attempted_hash.startswith('0000')
-
-    @property
-    def mined(self):
-        return self.nonce is not None
+        return attempted_hash.startswith('42069')
 
     def mine(self):
+    
+        print ("Mining started.")
         # If a nonce is not already set, and the block isn't mined, we just start from 0.
         mining_nonce = self.nonce or 0
 

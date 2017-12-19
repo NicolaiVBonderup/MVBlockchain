@@ -5,12 +5,13 @@ import signal
 import transaction as ts
 import block
 import blockchain
-import pickle
 import rsa
 from phonebook import Phonebook
 import sys
 import json
 from ast import literal_eval
+import uuid
+from rsa.pkcs1 import VerificationError
 
 class Server:
     
@@ -24,7 +25,7 @@ class Server:
         self.port = port
         self.chain = blockchain.Blockchain()
         self.phonebook = Phonebook()
-        self.uid = 'test1'
+        self.uid = uuid.uuid1()
 
     def activate_server(self):
         signal.signal(signal.SIGINT, graceful_shutdown)
@@ -57,6 +58,7 @@ class Server:
 
         print ("Server successfully acquired the socket with port: ", self.port)
         print ("Press Ctrl+C to shut down the server and exit.")
+        self.phonebook.add_peer_to_phonebook(str(self.uid),{'port':str(self.port),'pubkey_e':str(self.publickey.e),'pubkey_n':str(self.publickey.n)})
         self.request_phonebook_from_peers()
         self._wait_for_connections()
 
@@ -78,7 +80,7 @@ class Server:
         if self.testargs != "":
             ports = [int(x) for x in self.testargs.split(" ")]
         else: 
-            ports = range(8000,9000)
+            ports = range(8000,8100)
         
         for port_in_range in ports:
             try:
@@ -95,10 +97,9 @@ class Server:
                     self.phonebook.update_phonebook(peers_response, clients_response)
             
             except Exception as e:
+                pass
                 #print (e)
-                sock.close()
-            finally:
-                sock.close()
+                #sock.close()
 
 
     def _wait_for_connections(self):
@@ -116,12 +117,9 @@ class Server:
                 data = conn.recv(1024)
                 string = bytes.decode(data)
 
-                #split_message = string.split(' ')
                 split_message = string.split('$?$')
                 
                 message_type = split_message[0]
-                #print (split_message)
-                #print (message_type)
                 
                 if message_type == 'ping':
                 
@@ -129,42 +127,72 @@ class Server:
                     user_pubkey = {'pubkey_n': int(pubkey_n), 'pubkey_e': int(pubkey_e)}
                     self.phonebook.add_client_to_phonebook(name, user_pubkey)
                 
-                    ping_response = "ack {0} {1} {2} {3}".format('test',self.port,self.publickey.n,self.publickey.e)
+                    ping_response = "ack {0} {1} {2} {3}".format(self.uid,self.port,self.publickey.n,self.publickey.e)
                     conn.send(bytes(ping_response,'utf-8'))
                     
                     
                 elif message_type == 't':
+                
                     message_type, sender, receiver, message, value, fee, timestamp, verification = split_message
                     
                     verification_message = bytes("$?$".join([receiver, message, str(value), fee, str(timestamp)]),'utf-8')
                     
                     sender_key = self.phonebook.get_pubkey_from_UID(sender)
-                    if rsa.verify(verification_message, literal_eval(verification), sender_key):
-                        
-                        print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
-                        transaction = ts.Transaction(sender,sender,receiver,message)
-                        print (transaction)
-                        b1.add_transaction(transaction)
-                        if b1.has_enough_transactions():
-                            print ("Mining started.")
-                            b1.mine()
-                    except VerificationError:
+                    try:
+                        if rsa.verify(verification_message, literal_eval(verification), sender_key):
+                            
+                            print ("Sender: " + sender + " - Receiver: " + receiver + " - Message: " + message)
+                            transaction = ts.Transaction(sender,sender,receiver,message)
+                            b1.add_transaction(transaction)
+                            if b1.has_enough_transactions():
+                            #if 1 == 1:
+                                b1.mine()
+                                self.broadcast_block_to_network(b1)
+                                
+                    except VerificationError as e:
                         print ('Not verified')
+                        
+                        
                 elif message_type == 'b':
+                    
                     message_type, message = split_message
-                    self.blockchain.add_block_to_ledger()
+                    self.chain.add_block_to_ledger(message)
+                    
+                    
                 elif message_type == 'book':
+                
+                    
                     full_book = self.phonebook.get_all_peers()
+                    
                     peers_serialized = json.dumps(full_book[0])
                     clients_serialized = json.dumps(full_book[1])
+                    
                     book_response = "bookack$" + peers_serialized + "$" +  clients_serialized
+                    
                     print(book_response)
+                    
                     conn.send(bytes(book_response,'utf-8'))
                     
                 
             finally:
                 conn.close()
             
+    def broadcast_block_to_network(self, block):
+        
+        peers = self.phonebook.get_all_peers_for_announcement()
+        
+        for port_in_range in peers:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                message = "b$?$"+str(json.dumps(block))
+                
+                sock.connect(('localhost', int(port_in_range)))
+                sock.sendall(bytes(message, 'utf-8'))
+                
+            
+            except Exception as e:
+                print (e)
+                sock.close()
             
             
 def graceful_shutdown(sig, dummy):
