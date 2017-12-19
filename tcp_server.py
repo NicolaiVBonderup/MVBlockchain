@@ -39,22 +39,23 @@ class Server:
             self.socket.bind((self.host, self.port))
 
         except Exception as e:
-            print ("Warning: Could not acquire port:",self.port,"\n")
-            print ("Attempting to register on higher port.")
-            
-            user_port = self.port
-            self.port = 80
+            for i in range (self.port, self.port+1000):
+                print ("Warning: Could not acquire port:",self.port,"\n")
+                print ("Attempting to register on higher port.")
+                
+                user_port = self.port
+                self.port = self.port+1
 
-            try:
-                print("Launching HTTP server on ", self.host, ":",self.port)
-                self.socket.bind((self.host, self.port))
-
-            except Exception as e:
-                print("ERROR: Failed to acquire sockets for ports ", user_port, " and 8080. ")
-                print("Try running the Server in a privileged user mode.")
-                self.shutdown()
-                import sys
-                sys.exit(1)
+                try:
+                    print("Launching HTTP server on ", self.host, ":",self.port)
+                    self.socket.bind((self.host, self.port))
+                    break
+                except Exception as e:
+                    print("ERROR: Failed to acquire sockets for ports ", user_port, " and 8080. ")
+                    #print("Try running the Server in a privileged user mode.")
+                    #self.shutdown()
+                    #import sys
+                    #sys.exit(1)
 
         print ("Server successfully acquired the socket with port: ", self.port)
         print ("Press Ctrl+C to shut down the server and exit.")
@@ -148,6 +149,7 @@ class Server:
                             #if 1 == 1:
                                 b1.mine()
                                 self.broadcast_block_to_network(b1)
+                                b1.empty_transactions()
                                 
                     except VerificationError as e:
                         print ('Not verified')
@@ -169,7 +171,7 @@ class Server:
                     
                     book_response = "bookack$" + peers_serialized + "$" +  clients_serialized
                     
-                    print(book_response)
+                    #print(book_response)
                     
                     conn.send(bytes(book_response,'utf-8'))
                     

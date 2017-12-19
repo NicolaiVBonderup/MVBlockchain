@@ -39,6 +39,9 @@ class Block:
     def link(self, block):
         self.prev_hash = block.hash
         
+    def empty_transactions(self):
+        self.transactions = []
+        
     def seal(self):
         self.timestamp = time.time()
         self.hash = self.hash_block()
