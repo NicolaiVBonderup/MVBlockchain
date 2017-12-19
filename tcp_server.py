@@ -60,7 +60,8 @@ class Server:
         print ("Server successfully acquired the socket with port: ", self.port)
         print ("Press Ctrl+C to shut down the server and exit.")
         self.phonebook.add_peer_to_phonebook(str(self.uid),{'port':str(self.port),'pubkey_e':str(self.publickey.e),'pubkey_n':str(self.publickey.n)})
-        self.request_phonebook_from_peers()
+        if self.port != 8080:
+            self.request_phonebook_from_peers()
         self._wait_for_connections()
 
     def shutdown(self):
@@ -81,7 +82,7 @@ class Server:
         if self.testargs != "":
             ports = [int(x) for x in self.testargs.split(" ")]
         else: 
-            ports = range(8000,8100)
+            ports = range(8080,9080)
         
         for port_in_range in ports:
             try:
@@ -171,7 +172,6 @@ class Server:
                     
                     book_response = "bookack$" + peers_serialized + "$" +  clients_serialized
                     
-                    #print(book_response)
                     
                     conn.send(bytes(book_response,'utf-8'))
                     

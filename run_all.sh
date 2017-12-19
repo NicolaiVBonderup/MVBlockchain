@@ -1,0 +1,9 @@
+start run_blockchain.sh
+sleep 2
+start run_blockchain.sh
+sleep 2
+start run_blockchain.sh
+sleep 2
+start run_blockchain.sh
+sleep 2
+start run_client.sh

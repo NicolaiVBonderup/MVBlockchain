@@ -22,8 +22,6 @@ class Phonebook:
                 val = node_dict.get(key)
                 self.nodes.update({key:val})
                 
-        print (self.clients)
-        print (self.nodes)
         
         
     def add_client_to_phonebook(self, name, key):
